@@ -1,10 +1,11 @@
+# simulador.py
 import tkinter as tk
 from tkinter import messagebox
 
 class FrameConfigEntrevista(tk.Frame):
     def __init__(self, master, continuar_callback, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
-        self.config(bg="#18776e") 
+        self.config(bg="#18776e")
 
         self.continuar_callback = continuar_callback
 
@@ -43,7 +44,6 @@ class FrameConfigEntrevista(tk.Frame):
             btn.pack(side="left", padx=8)
             self.botoes_area[nome] = btn
 
-
         label_nivel = tk.Label(self, text="Escolha o seu nível de experiência:",
                               font=("Arial", 12), fg="white", bg="#18776e")
         label_nivel.pack(pady=(10,10))
@@ -54,7 +54,7 @@ class FrameConfigEntrevista(tk.Frame):
         niveis = [
             ("Junior", "0-2 anos de experiência"),
             ("Pleno", "2-5 anos de experiência"),
-            ("Senior", "5+ anos de experiência"),
+            ("Senior", "+5 anos de experiência"),
         ]
 
         for nome, desc in niveis:
@@ -103,7 +103,9 @@ class SimuladorEntrevista:
     def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Entrevista de Emprego")
+        # restringe tamanho mínimo e inicial
         self.root.geometry("600x450")
+        self.root.minsize(520, 420)
 
         self.frame1 = tk.Frame(self.root)
         self.frame2 = FrameConfigEntrevista(self.root, continuar_callback=self.iniciar_entrevista)
@@ -112,11 +114,12 @@ class SimuladorEntrevista:
         self.frame1.pack(fill="both", expand=True)
         self.mostrar_pagina1()
 
+        # perguntas de fallback (se a integração com Gemini não estiver configurada)
         self.perguntas_simuladas = {
             "Tecnologia": {
-                "Junior": ["Você conhece os conceitos básicos de programação?",],
-                "Pleno": ["Explique o que é orientação a objetos.",],
-                "Senior": ["Como você realiza a arquitetura de sistemas escaláveis?",]
+                "Junior": ["Você conhece os conceitos básicos de programação?"],
+                "Pleno": ["Explique o que é orientação a objetos."],
+                "Senior": ["Como você realiza a arquitetura de sistemas escaláveis?"]
             },
             "Saúde": {
                 "Junior": ["O que você sabe sobre ética profissional na saúde?"],
@@ -185,14 +188,24 @@ class SimuladorEntrevista:
         self.btn_enviar_resposta.pack(pady=15)
 
     def exibir_proxima_pergunta(self):
-        perguntas = self.perguntas_simuladas.get(self.area, {}).get(self.nivel, [])
-        if self.indice_pergunta < len(perguntas):
-            self.pergunta_atual = perguntas[self.indice_pergunta]
+        # tenta gerar pergunta via gemini_api (se estiver disponível), caso contrário usa fallback local
+        try:
+            from gemini_api import gerar_pergunta
+            pergunta = gerar_pergunta(area=self.area, nivel=self.nivel)
+            # garantir que sempre teremos texto
+            if not pergunta or not pergunta.strip():
+                raise Exception("Resposta vazia da API")
+            self.pergunta_atual = pergunta
             self.label_pergunta.config(text=f"Pergunta: {self.pergunta_atual}")
-        else:
-            self.label_pergunta.config(text="Parabéns! Você completou a simulação.")
-            self.entry_resposta.pack_forget()
-            self.btn_enviar_resposta.pack_forget()
+        except Exception:
+            perguntas = self.perguntas_simuladas.get(self.area, {}).get(self.nivel, [])
+            if self.indice_pergunta < len(perguntas):
+                self.pergunta_atual = perguntas[self.indice_pergunta]
+                self.label_pergunta.config(text=f"Pergunta: {self.pergunta_atual}")
+            else:
+                self.label_pergunta.config(text="Parabéns! Você completou a simulação.")
+                self.entry_resposta.pack_forget()
+                self.btn_enviar_resposta.pack_forget()
 
     def avaliar_resposta(self):
         resposta = self.entry_resposta.get()
@@ -200,16 +213,18 @@ class SimuladorEntrevista:
             messagebox.showerror("Erro", "Por favor, escreva uma resposta para continuar.")
             return
 
-        # Simula feedback básico
-        feedback = f"Resposta recebida: {resposta}\nContinue para a próxima pergunta."
+        # Tenta usar feedback do gemini_api (se disponível)
+        try:
+            from gemini_api import gerar_feedback
+            feedback = gerar_feedback(pergunta=self.pergunta_atual, resposta=resposta)
+            if not feedback:
+                raise Exception("Feedback vazio")
+        except Exception:
+            feedback = f"Resposta recebida: {resposta}\nContinue para a próxima pergunta."
+
         messagebox.showinfo("Feedback", feedback)
 
+        # se estivermos usando fallback local, avançamos índice; caso contrário, também avançamos
         self.indice_pergunta += 1
         self.entry_resposta.delete(0, tk.END)
         self.exibir_proxima_pergunta()
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SimuladorEntrevista(root)
-    root.mainloop()
