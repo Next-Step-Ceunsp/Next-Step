@@ -1,154 +1,237 @@
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
-import google.generativeai as genai
-import datetime
-
-# ==============================================
-# CONFIGURAÇÃO DA API DO GEMINI
-# ==============================================
-API_KEY = "AIzaSyAbsTFbP72DHffkCiaz8nVZzE6AkKInqI4"  # 🔒 Substitua pela sua chave real do Google AI Studio
-
-try:
-    genai.configure(api_key=API_KEY)
-    modelo = genai.GenerativeModel("gemini-1.5-pro-latest")  # ✅ Modelo compatível
-except Exception as e:
-    messagebox.showerror("Erro", f"Falha ao inicializar o modelo Gemini: {e}")
-    modelo = None
+from tkinter import Menu
+import webbrowser
+from PIL import Image, ImageTk
 
 
-# ==============================================
-# CLASSE DO SIMULADOR DE ENTREVISTA
-# ==============================================
 class SimuladorEntrevista(tk.Frame):
-    def __init__(self, master, usuario, callback_sair):
-        super().__init__(master)
+    def __init__(self, master, dados_usuario, callback_sair, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
         self.master = master
-        self.usuario = usuario
         self.callback_sair = callback_sair
-        self.historico = []
+        self.config(bg="white")
 
-        self.pack(fill="both", expand=True)
-        self.criar_interface()
+        # ================================
+        #   TOP BAR (User + NextStep + Sobre nós)
+        # ================================
+        topbar = tk.Frame(self, bg="#18776e", height=60)
+        topbar.pack(fill="x", side="top")
 
-    def criar_interface(self):
-        self.master.title("NextStep - Simulador de Entrevistas")
-        self.master.geometry("900x600")
-        self.master.configure(bg="#f5f5f5")
+        # Texto NextStep
+        titulo = tk.Label(
+            topbar,
+            text="NextStep",
+            fg="white",
+            bg="#18776e",
+            font=("Arial", 18, "bold")
+        )
+        titulo.pack(side="left", padx=20)
 
-        titulo = tk.Label(self, text=f"Bem-vindo, {self.usuario} 👋", font=("Arial", 22, "bold"), bg="#f5f5f5")
-        titulo.pack(pady=15)
+        # Botão Sobre Nós
+        sobre = tk.Label(
+            topbar,
+            text="Sobre nós",
+            fg="#A7E6D1",
+            bg="#18776e",
+            cursor="hand2",
+            font=("Arial", 14, "italic"),
+        )
+        sobre.pack(side="left", padx=15)
+        sobre.bind("<Button-1>", lambda e: webbrowser.open("https://nextstep3.netlify.app/"))
 
-        # Caixa de texto da entrevista
-        self.texto_entrevista = scrolledtext.ScrolledText(self, wrap=tk.WORD, width=90, height=20, font=("Arial", 11))
-        self.texto_entrevista.pack(padx=20, pady=10)
+        # Ícone usuário
+        try:
+            user_img = Image.open("assets/img/user.png").resize((35, 35))
+            self.user_icon = ImageTk.PhotoImage(user_img)
+        except:
+            self.user_icon = None
 
-        # Campo de entrada
-        self.entrada = tk.Entry(self, width=80, font=("Arial", 12))
-        self.entrada.pack(pady=10)
+        user_button = tk.Button(
+            topbar,
+            image=self.user_icon,
+            bg="#18776e",
+            activebackground="#18776e",
+            bd=0,
+            highlightthickness=0,
+            command=self.menu_usuario
+        )
+        user_button.pack(side="right", padx=20, pady=10)
 
-        # Botões principais
-        botoes_frame = tk.Frame(self, bg="#f5f5f5")
-        botoes_frame.pack(pady=10)
-
-        tk.Button(botoes_frame, text="Gerar Pergunta", command=self.gerar_pergunta,
-                  bg="#4CAF50", fg="white", font=("Arial", 11, "bold"),
-                  relief="ridge", padx=10, pady=5).grid(row=0, column=0, padx=5)
-
-        tk.Button(botoes_frame, text="Enviar Resposta", command=self.enviar_resposta,
-                  bg="#2196F3", fg="white", font=("Arial", 11, "bold"),
-                  relief="ridge", padx=10, pady=5).grid(row=0, column=1, padx=5)
-
-        tk.Button(botoes_frame, text="Gerar Feedback", command=self.gerar_feedback,
-                  bg="#FF9800", fg="white", font=("Arial", 11, "bold"),
-                  relief="ridge", padx=10, pady=5).grid(row=0, column=2, padx=5)
-
-        tk.Button(botoes_frame, text="Ver Histórico", command=self.ver_historico,
-                  bg="#9C27B0", fg="white", font=("Arial", 11, "bold"),
-                  relief="ridge", padx=10, pady=5).grid(row=0, column=3, padx=5)
-
-        tk.Button(botoes_frame, text="Sair", command=self.sair,
-                  bg="#F44336", fg="white", font=("Arial", 11, "bold"),
-                  relief="ridge", padx=10, pady=5).grid(row=0, column=4, padx=5)
-
-    # ===========================================================
-    # Funções principais
-    # ===========================================================
-    def gerar_pergunta(self):
-        """Gera uma nova pergunta de entrevista usando o Gemini"""
-        if not modelo:
-            messagebox.showerror("Erro", "O modelo Gemini não foi inicializado corretamente.")
-            return
+        # ================================
+        #        SIDEBAR
+        # ================================
+        self.sidebar = tk.Frame(self, bg="#145d54", width=240)
+        self.sidebar.pack(side="left", fill="y")
 
         try:
-            resposta = modelo.generate_content("Gere uma pergunta de entrevista de emprego realista e profissional.")
-            pergunta = resposta.text.strip()
-            self.texto_entrevista.insert(tk.END, f"\nPergunta: {pergunta}\n")
-            self.texto_entrevista.see(tk.END)
-            self.historico.append({"tipo": "pergunta", "conteudo": pergunta})
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar pergunta: {e}")
+            logo_img = Image.open("assets/img/logo.png").resize((110, 110))
+            self.logo = ImageTk.PhotoImage(logo_img)
+            tk.Label(self.sidebar, image=self.logo, bg="#145d54").pack(pady=25)
+        except:
+            tk.Label(self.sidebar, text="NextStep",
+                     font=("Arial", 20, "bold"),
+                     fg="white", bg="#145d54").pack(pady=25)
 
-    def enviar_resposta(self):
-        """Envia a resposta do usuário"""
-        resposta = self.entrada.get().strip()
-        if not resposta:
-            messagebox.showwarning("Aviso", "Digite uma resposta antes de enviar.")
-            return
+        nova_item = tk.Label(
+            self.sidebar,
+            text="➕  Nova Entrevista",
+            fg="white",
+            bg="#145d54",
+            font=("Arial", 15, "bold"),
+            cursor="hand2",
+            pady=15
+        )
+        nova_item.pack(fill="x")
+        nova_item.bind("<Button-1>", lambda e: self.limpar_chat())
 
-        self.texto_entrevista.insert(tk.END, f"Resposta: {resposta}\n")
-        self.entrada.delete(0, tk.END)
-        self.historico.append({"tipo": "resposta", "conteudo": resposta})
+        historico_item = tk.Label(
+            self.sidebar,
+            text="📂  Histórico de Entrevistas",
+            fg="white",
+            bg="#145d54",
+            font=("Arial", 15, "bold"),
+            cursor="hand2",
+            pady=15
+        )
+        historico_item.pack(fill="x")
+        historico_item.bind("<Button-1>", lambda e: self.abrir_historico())
 
-    def gerar_feedback(self):
-        """Gera um feedback da entrevista baseado na última resposta"""
-        if not modelo:
-            messagebox.showerror("Erro", "O modelo Gemini não foi inicializado corretamente.")
-            return
+        # ================================
+        #        CHAT + SCROLL
+        # ================================
+        self.chat_container = tk.Frame(self, bg="white")
+        self.chat_container.pack(side="right", fill="both", expand=True)
 
-        # Pega a última resposta do histórico
-        ultima_resposta = next((item["conteudo"] for item in reversed(self.historico) if item["tipo"] == "resposta"), None)
+        self.canvas = tk.Canvas(self.chat_container, bg="white", highlightthickness=0)
+        self.canvas.pack(side="left", fill="both", expand=True)
 
-        if not ultima_resposta:
-            messagebox.showwarning("Aviso", "Nenhuma resposta encontrada para gerar feedback.")
-            return
+        self.scroll = tk.Scrollbar(self.chat_container, command=self.canvas.yview)
+        self.scroll.pack(side="right", fill="y")
+
+        self.canvas.configure(yscrollcommand=self.scroll.set)
+
+        self.chat_frame = tk.Frame(self.canvas, bg="white")
+        self.canvas.create_window((0, 0), window=self.chat_frame, anchor="nw")
+
+        self.chat_frame.bind("<Configure>", lambda e: self.canvas.configure(
+            scrollregion=self.canvas.bbox("all")
+        ))
+
+        # ================================
+        #  BARRA DE DIGITAÇÃO COMPLETA (CORRIGIDA)
+        # ================================
+        input_area = tk.Frame(self, bg="#e9e9e9")
+        input_area.pack(fill="x", side="bottom")
+
+        input_area.update_idletasks()
+        input_area.configure(height=100)
+
+        self.entry = tk.Entry(
+            input_area,
+            font=("Arial", 16),
+        )
+        self.entry.pack(
+            fill="both",
+            expand=True,
+            side="left",
+            padx=20,
+            pady=20,
+            ipady=20  # aumenta a altura do campo de digitação
+        )
+        self.entry.bind("<Return>", self.enviar_mensagem)
 
         try:
-            prompt = f"Analise a seguinte resposta de entrevista e forneça um feedback construtivo:\n\n{ultima_resposta}"
-            resposta = modelo.generate_content(prompt)
-            feedback = resposta.text.strip()
-            self.texto_entrevista.insert(tk.END, f"\n💬 Feedback: {feedback}\n")
-            self.texto_entrevista.see(tk.END)
-            self.historico.append({"tipo": "feedback", "conteudo": feedback})
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar feedback: {e}")
+            send_img = Image.open("assets/img/send.png").resize((35, 35))
+            self.send_icon = ImageTk.PhotoImage(send_img)
+        except:
+            self.send_icon = None
 
-    def ver_historico(self):
-        """Mostra o histórico de perguntas e respostas"""
-        if not self.historico:
-            messagebox.showinfo("Histórico", "Nenhuma entrevista registrada ainda.")
+        send_button = tk.Button(
+            input_area,
+            image=self.send_icon,
+            bg="#e9e9e9",
+            activebackground="#e9e9e9",
+            bd=0,
+            command=self.enviar_mensagem
+        )
+        send_button.pack(side="right", padx=20, pady=10)
+
+    # ================================
+    #   MENU DO USUÁRIO
+    # ================================
+    def menu_usuario(self):
+        menu = Menu(self.master, tearoff=0)
+        menu.add_command(label="Sair", command=self.callback_sair)
+        try:
+            menu.tk_popup(self.winfo_rootx() + self.winfo_width() - 100,
+                          self.winfo_rooty() + 50)
+        finally:
+            menu.grab_release()
+
+    # ================================
+    #   MENSAGEM DO USER → DIREITA
+    # ================================
+    def adicionar_mensagem_usuario(self, texto):
+        frame = tk.Frame(self.chat_frame, bg="white")
+        frame.pack(anchor="e", pady=5, padx=10, fill="x")
+
+        bubble = tk.Label(
+            frame,
+            text=texto,
+            bg="#dff7f3",
+            fg="black",
+            font=("Arial", 13),
+            padx=12,
+            pady=8,
+            wraplength=700,
+            justify="left"
+        )
+        bubble.pack(anchor="e")
+
+    # ================================
+    #   MENSAGEM DA IA → ESQUERDA
+    # ================================
+    def adicionar_mensagem_ia(self, texto):
+        frame = tk.Frame(self.chat_frame, bg="white")
+        frame.pack(anchor="w", pady=5, padx=10, fill="x")
+
+        bubble = tk.Label(
+            frame,
+            text=texto,
+            bg="#18776e",
+            fg="white",
+            font=("Arial", 13),
+            padx=12,
+            pady=8,
+            wraplength=700,
+            justify="left"
+        )
+        bubble.pack(anchor="w")
+
+    # ================================
+    #   ENVIAR
+    # ================================
+    def enviar_mensagem(self, event=None):
+        texto = self.entry.get().strip()
+        if texto == "":
             return
 
-        janela_hist = tk.Toplevel(self)
-        janela_hist.title("Histórico de Entrevistas")
-        janela_hist.geometry("700x500")
-        janela_hist.configure(bg="#fafafa")
+        self.entry.delete(0, tk.END)
+        self.adicionar_mensagem_usuario(texto)
 
-        tk.Label(janela_hist, text=f"Histórico de {self.usuario}", font=("Arial", 16, "bold"), bg="#fafafa").pack(pady=10)
+        self.canvas.update_idletasks()
+        self.canvas.yview_moveto(1)
 
-        caixa = scrolledtext.ScrolledText(janela_hist, wrap=tk.WORD, width=80, height=25, font=("Arial", 10))
-        caixa.pack(padx=10, pady=10)
+    # ================================
+    #   LIMPAR CHAT
+    # ================================
+    def limpar_chat(self):
+        for widget in self.chat_frame.winfo_children():
+            widget.destroy()
 
-        for item in self.historico:
-            tipo = item["tipo"].capitalize()
-            conteudo = item["conteudo"]
-            data = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            caixa.insert(tk.END, f"[{data}] {tipo}: {conteudo}\n\n")
-
-        caixa.configure(state="disabled")
-
-    def sair(self):
-        """Retorna para a tela de login"""
-        resposta = messagebox.askyesno("Sair", "Deseja realmente sair?")
-        if resposta:
-            self.destroy()
-            self.callback_sair()
+    # ================================
+    #   HISTÓRICO
+    # ================================
+    def abrir_historico(self):
+        self.limpar_chat()
+        self.adicionar_mensagem_ia("📂 Aqui aparecerá o histórico de entrevistas (em desenvolvimento).")

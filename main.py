@@ -3,9 +3,11 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 import time
 import threading
+
 from login import TelaLogin
 from simulador import SimuladorEntrevista
-from cadastro import TelaCadastro  # ✅ importante: importa a tela de cadastro
+from cadastro import TelaCadastro
+from esquecersenha import TelaEsquecerSenha
 
 
 class SplashScreen(tk.Frame):
@@ -14,7 +16,6 @@ class SplashScreen(tk.Frame):
         self.on_finish_callback = on_finish_callback
         self.config(bg="#18776e")
 
-        # Tela cheia
         self.pack(fill="both", expand=True)
         container = tk.Frame(self, bg="#18776e")
         container.place(relx=0.5, rely=0.5, anchor="center")
@@ -33,15 +34,17 @@ class SplashScreen(tk.Frame):
             tk.Label(container, text="NextStep", font=("Arial", 36, "bold"),
                      fg="white", bg="#18776e").pack(pady=(0, 20))
 
-        self.texto = tk.Label(container,
-                              text="Sua próxima entrevista começa aqui.",
-                              font=("Arial", 18), fg="white", bg="#18776e")
+        self.texto = tk.Label(
+            container,
+            text="Sua próxima entrevista começa aqui.",
+            font=("Arial", 18),
+            fg="white",
+            bg="#18776e"
+        )
         self.texto.pack(pady=(0, 30))
 
-        self.progress = ttk.Progressbar(container,
-                                        orient="horizontal",
-                                        length=400,
-                                        mode="indeterminate")
+        self.progress = ttk.Progressbar(container, orient="horizontal",
+                                        length=400, mode="indeterminate")
         self.progress.pack(pady=(10, 10))
         self.progress.start(15)
 
@@ -63,7 +66,7 @@ class App:
         self.splash = SplashScreen(self.root, self.mostrar_login)
         self.splash.pack(fill="both", expand=True)
 
-    # --- Limpa widgets anteriores ---
+    # --- LIMPAR TELA ---
     def limpar_tela(self):
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -71,20 +74,37 @@ class App:
     # --- LOGIN ---
     def mostrar_login(self):
         self.limpar_tela()
-        self.login = TelaLogin(self.root, self.login_sucesso, self.mostrar_cadastro)
+        self.login = TelaLogin(
+            self.root,
+            self.login_sucesso,
+            self.mostrar_cadastro,
+            self.mostrar_esquecersenha
+        )
         self.login.pack(fill="both", expand=True)
 
     # --- LOGIN SUCESSO ---
-    def login_sucesso(self, usuario):
+        # --- LOGIN SUCESSO ---
+    def login_sucesso(self, dados_usuario):
         self.limpar_tela()
-        self.simulador = SimuladorEntrevista(self.root, usuario, callback_sair=self.mostrar_login)
+        self.simulador = SimuladorEntrevista(
+            self.root,
+            dados_usuario,
+            callback_sair=self.mostrar_login
+        )
         self.simulador.pack(fill="both", expand=True)
+
 
     # --- CADASTRO ---
     def mostrar_cadastro(self):
         self.limpar_tela()
         self.cadastro = TelaCadastro(self.root, self.mostrar_login)
         self.cadastro.pack(expand=True, fill="both")
+
+    # --- ESQUECER SENHA ---
+    def mostrar_esquecersenha(self):
+        self.limpar_tela()
+        self.esquecer = TelaEsquecerSenha(self.root, self.mostrar_login)
+        self.esquecer.pack(fill="both", expand=True)
 
 
 if __name__ == "__main__":

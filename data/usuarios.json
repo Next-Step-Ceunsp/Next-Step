@@ -1,4 +1,16 @@
 {
     "123": "123",
-    "miguel": "miguel123"
+    "miguel": "miguel123",
+    "miguel@gmail.com": {
+        "nome": "miguel lara pedroso",
+        "senha": "123"
+    },
+    "234": {
+        "nome": "234",
+        "senha": "234"
+    },
+    "miguellarapedroso37@gmail.com": {
+        "nome": "Miguel Lara Pedroso",
+        "senha": "123"
+    }
 }
