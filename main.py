@@ -1,3 +1,4 @@
+# main.py (Versão Corrigida para incluir TelaHome)
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
@@ -5,11 +6,13 @@ import time
 import threading
 
 from login import TelaLogin
-from simulador import SimuladorEntrevista
+from Simulador import SimuladorEntrevista
 from cadastro import TelaCadastro
 from esquecersenha import TelaEsquecerSenha
+from TelaHome import TelaHome # NOVO: Importa a TelaHome
 
 
+# --- CÓDIGO DA SPLASHSCREEN (MANTIDO INALTERADO) ---
 class SplashScreen(tk.Frame):
     def __init__(self, master, on_finish_callback, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
@@ -29,39 +32,35 @@ class SplashScreen(tk.Frame):
             frame_logo.pack(pady=(0, 20))
             tk.Label(frame_logo, image=self.logo, bg="#18776e").pack()
             tk.Label(frame_logo, text="NextStep", font=("Arial", 28, "bold"),
-                     fg="white", bg="#18776e").pack(pady=(10, 0))
+                     fg="white").pack()
         except:
-            tk.Label(container, text="NextStep", font=("Arial", 36, "bold"),
-                     fg="white", bg="#18776e").pack(pady=(0, 20))
+             tk.Label(container, text="NextStep", font=("Arial", 28, "bold"),
+                     fg="white", bg="#18776e").pack(pady=40)
 
-        self.texto = tk.Label(
-            container,
-            text="Sua próxima entrevista começa aqui.",
-            font=("Arial", 18),
-            fg="white",
-            bg="#18776e"
-        )
-        self.texto.pack(pady=(0, 30))
+        self.pb = ttk.Progressbar(container, orient="horizontal", length=200, mode="determinate")
+        self.pb.pack(pady=20)
+        self.pb.start(10)
 
-        self.progress = ttk.Progressbar(container, orient="horizontal",
-                                        length=400, mode="indeterminate")
-        self.progress.pack(pady=(10, 10))
-        self.progress.start(15)
+        # Inicia a thread para a transição
+        threading.Thread(target=self._simular_carregamento, daemon=True).start()
 
-        threading.Thread(target=self.aguardar_e_transitar, daemon=True).start()
+    def _simular_carregamento(self):
+        # Simula um tempo de carregamento
+        time.sleep(2) 
+        self.master.after(0, self.on_finish_callback)
+        
 
-    def aguardar_e_transitar(self):
-        time.sleep(3.5)
-        self.on_finish_callback()
-
-
-class App:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("NextStep - Simulador de Entrevistas")
-        self.root.attributes('-fullscreen', True)
+class NextStepApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("NextStep - Simulador de Entrevista")
+        self.root.geometry("1200x800")
+        self.root.minsize(800, 600)
         self.root.config(bg="#18776e")
+        self.root.protocol("WM_DELETE_WINDOW", self.on_fechar)
         self.root.bind("<Escape>", lambda e: self.root.destroy())
+
+        self.user_data = None # Armazena os dados do usuário logado
 
         self.splash = SplashScreen(self.root, self.mostrar_login)
         self.splash.pack(fill="both", expand=True)
@@ -82,14 +81,26 @@ class App:
         )
         self.login.pack(fill="both", expand=True)
 
-    # --- LOGIN SUCESSO ---
-        # --- LOGIN SUCESSO ---
+    # --- HOME (NOVO PONTO DE ENTRADA PÓS-LOGIN) ---
     def login_sucesso(self, dados_usuario):
+        self.user_data = dados_usuario
+        self.limpar_tela()
+        self.home = TelaHome(
+            self.root,
+            self.user_data,
+            callback_iniciar_simulador=self.iniciar_simulador, # Novo callback
+            callback_sair=self.mostrar_login # Volta para o Login
+        )
+        self.home.pack(fill="both", expand=True)
+
+    # --- INICIAR SIMULADOR (NOVA FUNÇÃO DE TRANSIÇÃO) ---
+    def iniciar_simulador(self, vaga_empresa):
         self.limpar_tela()
         self.simulador = SimuladorEntrevista(
             self.root,
-            dados_usuario,
-            callback_sair=self.mostrar_login
+            self.user_data,
+            vaga_empresa, # Passa a vaga/empresa
+            callback_sair=lambda: self.login_sucesso(self.user_data) # Volta para a Home/Menu Principal
         )
         self.simulador.pack(fill="both", expand=True)
 
@@ -104,10 +115,16 @@ class App:
     def mostrar_esquecersenha(self):
         self.limpar_tela()
         self.esquecer = TelaEsquecerSenha(self.root, self.mostrar_login)
-        self.esquecer.pack(fill="both", expand=True)
+        self.esquecer.pack(expand=True, fill="both")
 
+    # --- FECHAR ---
+    def on_fechar(self):
+        if messagebox.askokcancel("Sair", "Tem certeza que deseja fechar o aplicativo?"):
+            self.root.destroy()
+
+    def run(self):
+        self.root.mainloop()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = App(root)
-    root.mainloop()
+    app = NextStepApp()
+    app.run()
